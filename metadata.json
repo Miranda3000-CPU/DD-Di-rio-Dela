@@ -1,0 +1,6 @@
+{
+  "name": "DD - Diário Dela",
+  "description": "DD (Diário Dela) - Acompanhamento inteligente e privado de ciclo menstrual, previsões adaptativas por Machine Learning, calendário e histórico.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
