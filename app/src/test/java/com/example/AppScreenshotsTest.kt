@@ -9,8 +9,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.dp
 import com.example.data.CycleEntity
 import com.example.data.DailyLogEntity
@@ -237,5 +239,74 @@ class AppScreenshotsTest {
         }
 
         composeTestRule.onRoot().captureRoboImage(filePath = "docs/screenshots/04_ajustes_backup.png")
+    }
+
+    @Test
+    fun screenshot_05_registrar_dia() {
+        composeTestRule.setContent {
+            MeuCicloTheme {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.surface
+                ) {
+                    com.example.ui.components.LogPeriodSheetContent(
+                        initialDate = testToday,
+                        existingLog = testDailyLogs.firstOrNull(),
+                        onDismiss = {},
+                        onSave = { _, _, _, _, _, _, _, _, _, _, _ -> }
+                    )
+                }
+            }
+        }
+
+        composeTestRule.onRoot().captureRoboImage(filePath = "docs/screenshots/05_registrar_dia.png")
+    }
+
+    @Test
+    fun screenshot_05b_registrar_dia_detalhes() {
+        composeTestRule.setContent {
+            MeuCicloTheme {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.surface
+                ) {
+                    com.example.ui.components.LogPeriodSheetContent(
+                        initialDate = testToday,
+                        existingLog = testDailyLogs.firstOrNull(),
+                        onDismiss = {},
+                        onSave = { _, _, _, _, _, _, _, _, _, _, _ -> }
+                    )
+                }
+            }
+        }
+
+        composeTestRule.onNode(androidx.compose.ui.test.hasText("Sintomas Físicos"))
+            .performScrollTo()
+
+        composeTestRule.onRoot().captureRoboImage(filePath = "docs/screenshots/05b_registrar_dia_dor_sintomas.png")
+    }
+
+    @Test
+    fun screenshot_05c_registrar_dia_bem_estar_notas() {
+        composeTestRule.setContent {
+            MeuCicloTheme {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.surface
+                ) {
+                    com.example.ui.components.LogPeriodSheetContent(
+                        initialDate = testToday,
+                        existingLog = testDailyLogs.firstOrNull(),
+                        onDismiss = {},
+                        onSave = { _, _, _, _, _, _, _, _, _, _, _ -> }
+                    )
+                }
+            }
+        }
+
+        composeTestRule.onNode(androidx.compose.ui.test.hasText("Observações & Notas"))
+            .performScrollTo()
+
+        composeTestRule.onRoot().captureRoboImage(filePath = "docs/screenshots/05c_registrar_dia_bem_estar_notas.png")
     }
 }
