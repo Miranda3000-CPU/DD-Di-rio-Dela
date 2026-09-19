@@ -1,3 +1,7 @@
 <resources>
-    <string name="app_name">DD</string>
+    <string name="app_name">DD • Diário Dela</string>
+    <string name="notification_channel_predictions_name">Previsões do Ciclo</string>
+    <string name="notification_channel_predictions_desc">Lembretes e estimativas sobre as fases do seu ciclo</string>
+    <string name="notification_channel_reminders_name">Lembretes do Diário</string>
+    <string name="notification_channel_reminders_desc">Lembretes carinhosos para registrar como você está se sentindo</string>
 </resources>

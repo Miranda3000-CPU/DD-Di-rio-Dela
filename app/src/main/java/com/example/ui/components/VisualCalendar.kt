@@ -17,9 +17,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -28,6 +31,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -43,27 +47,24 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.CycleEntity
+import com.example.data.DailyLogEntity
 import com.example.model.CyclePrediction
 import com.example.ui.theme.FertileBluePrimary
 import com.example.ui.theme.OvulationPurplePrimary
 import com.example.ui.theme.PeriodRosePrimary
 import com.example.ui.theme.PeriodRoseSecondary
-import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
-import java.time.format.TextStyle
 import java.util.Locale
-
-import androidx.compose.material.icons.filled.HelpOutline
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.TextButton
 
 @Composable
 fun VisualCalendar(
     cycles: List<CycleEntity>,
+    dailyLogs: List<DailyLogEntity> = emptyList(),
     prediction: CyclePrediction,
     selectedDate: LocalDate,
+    selectedDateLog: DailyLogEntity? = null,
     onDateSelected: (LocalDate) -> Unit,
     onLogDateClick: (LocalDate) -> Unit,
     modifier: Modifier = Modifier
@@ -71,7 +72,7 @@ fun VisualCalendar(
     var currentYearMonth by remember { mutableStateOf(YearMonth.from(selectedDate)) }
     var showTourDialog by remember { mutableStateOf(false) }
 
-    val PortugueseLocale = Locale("pt", "BR")
+    val portugueseLocale = Locale.forLanguageTag("pt-BR")
 
     val daysInMonth = currentYearMonth.lengthOfMonth()
     val firstDayOfMonth = currentYearMonth.atDay(1)
@@ -92,7 +93,7 @@ fun VisualCalendar(
                 .fillMaxWidth()
                 .padding(20.dp)
         ) {
-            // Month Header Navigation & Tour Button
+            // Month Header Navigation & Guide Button
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -106,8 +107,8 @@ fun VisualCalendar(
                 }
 
                 val monthYearText = currentYearMonth.format(
-                    DateTimeFormatter.ofPattern("MMMM yyyy", PortugueseLocale)
-                ).replaceFirstChar { if (it.isLowerCase()) it.titlecase(PortugueseLocale) else it.toString() }
+                    DateTimeFormatter.ofPattern("MMMM yyyy", portugueseLocale)
+                ).replaceFirstChar { if (it.isLowerCase()) it.titlecase(portugueseLocale) else it.toString() }
 
                 Text(
                     text = monthYearText,
@@ -119,8 +120,8 @@ fun VisualCalendar(
                 Row {
                     IconButton(onClick = { showTourDialog = true }) {
                         Icon(
-                            imageVector = Icons.Default.HelpOutline,
-                            contentDescription = "Guia de Cores / Tour",
+                            imageVector = Icons.AutoMirrored.Filled.HelpOutline,
+                            contentDescription = "Guia de Cores",
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
@@ -167,7 +168,7 @@ fun VisualCalendar(
                                 val isSelected = date == selectedDate
                                 val isToday = date == LocalDate.now()
 
-                                val dayInfo = getDayPhaseInfo(date, cycles, prediction)
+                                val dayInfo = getDayPhaseInfo(date, cycles, dailyLogs, prediction)
 
                                 CalendarDayCell(
                                     dayNumber = dayNumber,
@@ -192,50 +193,83 @@ fun VisualCalendar(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Selected Day Info & Action Box
+            // Selected Day Details & Log Box
+            val dateFormatted = selectedDate.format(
+                DateTimeFormatter.ofPattern("EEEE, dd 'de' MMMM", portugueseLocale)
+            ).replaceFirstChar { if (it.isLowerCase()) it.titlecase(portugueseLocale) else it.toString() }
+
+            val selectedInfo = getDayPhaseInfo(selectedDate, cycles, dailyLogs, prediction)
+
             Surface(
                 color = MaterialTheme.colorScheme.surfaceVariant,
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Row(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(14.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    val dateFormatted = selectedDate.format(
-                        DateTimeFormatter.ofPattern("dd 'de' MMMM", PortugueseLocale)
-                    )
-                    val selectedInfo = getDayPhaseInfo(selectedDate, cycles, prediction)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = dateFormatted,
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = selectedInfo.label,
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Medium,
+                                color = selectedInfo.color
+                            )
+                        }
 
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = dateFormatted,
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = selectedInfo.label,
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Medium,
-                            color = selectedInfo.color
-                        )
+                        OutlinedButton(
+                            onClick = { onLogDateClick(selectedDate) },
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (selectedDateLog != null) Icons.Default.Edit else Icons.Default.Add,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = if (selectedDateLog != null) "Editar" else "Registrar",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
 
-                    OutlinedButton(
-                        onClick = { onLogDateClick(selectedDate) },
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Registrar", fontSize = 12.sp)
+                    // Display details if user logged symptoms/mood/flow for this day
+                    selectedDateLog?.let { log ->
+                        val details = mutableListOf<String>()
+                        log.flowIntensity?.let { if (it.isNotBlank() && it != "SEM_FLUXO") details.add("Fluxo: $it") }
+                        log.painLevel?.let { if (it.isNotBlank() && it != "NENHUMA") details.add("Dor: $it") }
+                        if (log.symptoms.isNotBlank()) details.add("Sintomas: ${log.symptoms}")
+                        log.mood?.let { if (it.isNotBlank()) details.add("Humor: $it") }
+                        log.energyLevel?.let { if (it.isNotBlank()) details.add("Energia: $it") }
+                        log.sleepQuality?.let { if (it.isNotBlank()) details.add("Sono: $it") }
+                        log.cervicalMucus?.let { if (it.isNotBlank()) details.add("Fluido: $it") }
+                        if (log.notes.isNotBlank()) details.add("Obs: ${log.notes}")
+
+                        if (details.isNotEmpty()) {
+                            Text(
+                                text = details.joinToString(" • "),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                lineHeight = 18.sp,
+                                modifier = Modifier.padding(top = 4.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -248,11 +282,11 @@ fun VisualCalendar(
             title = { Text("Guia do Calendário", fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Conheça o significado das cores do seu calendário:")
-                    TourItem(color = PeriodRosePrimary, title = "Menstruação Registrada", desc = "Dias de sangramento informados por você.")
-                    TourItem(color = FertileBluePrimary, title = "Período Fértil", desc = "Janela com maior probabilidade de concepção.")
-                    TourItem(color = OvulationPurplePrimary, title = "Dia da Ovulação", desc = "Dia estimado de liberação do óvulo.")
-                    TourItem(color = PeriodRoseSecondary, title = "Previsão de Menstruação", desc = "Estimativa do próximo ciclo calculada pelo modelo.")
+                    Text("Entenda as marcações do seu ciclo:")
+                    TourItem(color = PeriodRosePrimary, title = "Menstruação Registrada", desc = "Dias de sangramento registrados por você.")
+                    TourItem(color = PeriodRoseSecondary.copy(alpha = 0.5f), title = "Previsões para 90 dias", desc = "Estimativas futuras projetadas pelo modelo adaptativo.")
+                    TourItem(color = FertileBluePrimary, title = "Janela Fértil Estimada", desc = "Estimativa baseada no ciclo. Não confirma ovulação.")
+                    TourItem(color = OvulationPurplePrimary, title = "Ovulação Estimada", desc = "Dia estimado de ovulação retrospectiva.")
                 }
             },
             confirmButton = {
@@ -288,15 +322,17 @@ private data class DayPhaseInfo(
     val isPeriod: Boolean = false,
     val isFertile: Boolean = false,
     val isOvulation: Boolean = false,
-    val isPredictedPeriod: Boolean = false
+    val isPredictedPeriod: Boolean = false,
+    val hasLog: Boolean = false
 )
 
 private fun getDayPhaseInfo(
     date: LocalDate,
     cycles: List<CycleEntity>,
+    dailyLogs: List<DailyLogEntity>,
     prediction: CyclePrediction
 ): DayPhaseInfo {
-    // 1. Check logged period records
+    // 1. Registered period in logged cycles
     cycles.forEach { cycle ->
         val start = LocalDate.ofEpochDay(cycle.startDateEpochDay)
         val end = start.plusDays((cycle.periodLengthDays - 1).toLong())
@@ -305,24 +341,43 @@ private fun getDayPhaseInfo(
         }
     }
 
-    // 2. Check predicted ovulation
+    // 2. Ovulation check in primary prediction and 90-day projections
     if (prediction.ovulationDate == date) {
-        return DayPhaseInfo("Dia da Ovulação Estimado", OvulationPurplePrimary, isOvulation = true)
+        return DayPhaseInfo("Ovulação Estimada", OvulationPurplePrimary, isOvulation = true)
+    }
+    prediction.projectedCycles90Days.forEach { projected ->
+        if (projected.estimatedOvulationDate == date) {
+            return DayPhaseInfo("Ovulação Estimada (Futura)", OvulationPurplePrimary, isOvulation = true)
+        }
     }
 
-    // 3. Check fertile window
+    // 3. Fertile window check in primary and projections
     if (prediction.fertileStart != null && prediction.fertileEnd != null) {
         if (!date.isBefore(prediction.fertileStart) && !date.isAfter(prediction.fertileEnd)) {
-            return DayPhaseInfo("Período Fértil Estimado", FertileBluePrimary, isFertile = true)
+            return DayPhaseInfo("Janela Fértil Estimada", FertileBluePrimary, isFertile = true)
+        }
+    }
+    prediction.projectedCycles90Days.forEach { projected ->
+        if (!date.isBefore(projected.fertileStart) && !date.isAfter(projected.fertileEnd)) {
+            return DayPhaseInfo("Janela Fértil Estimada (Futura)", FertileBluePrimary, isFertile = true)
         }
     }
 
-    // 4. Check predicted next period
-    if (prediction.nextPeriodStart != null) {
-        val predEnd = prediction.nextPeriodStart.plusDays((prediction.averagePeriodLengthDays - 1).toLong())
-        if (!date.isBefore(prediction.nextPeriodStart) && !date.isAfter(predEnd)) {
-            return DayPhaseInfo("Previsão de Menstruação", PeriodRoseSecondary, isPredictedPeriod = true)
+    // 4. Projected period in 90-day horizon
+    prediction.projectedCycles90Days.forEach { projected ->
+        if (!date.isBefore(projected.estimatedStartDate) && !date.isAfter(projected.estimatedPeriodEndDate)) {
+            return DayPhaseInfo(
+                "Previsão de Menstruação (${projected.cycleIndex}º ciclo)",
+                PeriodRoseSecondary,
+                isPredictedPeriod = true
+            )
         }
+    }
+
+    // 5. Check if daily log exists for this day
+    val hasLog = dailyLogs.any { it.dateEpochDay == date.toEpochDay() }
+    if (hasLog) {
+        return DayPhaseInfo("Registro do Dia", PeriodRosePrimary, hasLog = true)
     }
 
     return DayPhaseInfo("Fase Normal do Ciclo", Color.Gray)
@@ -341,7 +396,7 @@ private fun CalendarDayCell(
         dayInfo.isPeriod -> PeriodRosePrimary
         dayInfo.isOvulation -> OvulationPurplePrimary
         dayInfo.isFertile -> FertileBluePrimary
-        dayInfo.isPredictedPeriod -> PeriodRoseSecondary.copy(alpha = 0.4f)
+        dayInfo.isPredictedPeriod -> PeriodRoseSecondary.copy(alpha = 0.35f)
         isToday -> MaterialTheme.colorScheme.primaryContainer
         else -> Color.Transparent
     }
@@ -383,6 +438,7 @@ private fun CalendarLegendRow() {
         verticalAlignment = Alignment.CenterVertically
     ) {
         LegendDot(color = PeriodRosePrimary, label = "Menstruação")
+        LegendDot(color = PeriodRoseSecondary.copy(alpha = 0.5f), label = "Previsão 90d")
         LegendDot(color = FertileBluePrimary, label = "Fértil")
         LegendDot(color = OvulationPurplePrimary, label = "Ovulação")
     }
@@ -396,7 +452,7 @@ private fun LegendDot(color: Color, label: String) {
                 .size(10.dp)
                 .clip(CircleShape)
                 .background(color)
-        ) { }
+        )
         Spacer(modifier = Modifier.width(4.dp))
         Text(
             text = label,

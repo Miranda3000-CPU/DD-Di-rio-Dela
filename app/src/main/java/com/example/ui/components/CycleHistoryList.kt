@@ -14,14 +14,20 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -32,7 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -43,13 +49,6 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.FilterChip
-
 @Composable
 fun CycleHistoryList(
     cycles: List<CycleEntity>,
@@ -59,15 +58,15 @@ fun CycleHistoryList(
     onDeleteCycle: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val PortugueseLocale = Locale("pt", "BR")
-    val dateFormatter = DateTimeFormatter.ofPattern("dd 'de' MMMM 'de' yyyy", PortugueseLocale)
+    val portugueseLocale = Locale.forLanguageTag("pt-BR")
+    val dateFormatter = DateTimeFormatter.ofPattern("dd 'de' MMMM 'de' yyyy", portugueseLocale)
 
     var searchQuery by remember { mutableStateOf("") }
     var sortDescending by remember { mutableStateOf(true) }
     var cycleToDelete by remember { mutableStateOf<CycleEntity?>(null) }
 
     val filteredCycles = remember(cycles, searchQuery, sortDescending) {
-        var list = if (searchQuery.isBlank()) {
+        val list = if (searchQuery.isBlank()) {
             cycles
         } else {
             cycles.filter { cycle ->
@@ -94,7 +93,7 @@ fun CycleHistoryList(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Histórico de Ciclos",
+                text = "Seu Histórico de Ciclos",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
@@ -114,7 +113,7 @@ fun CycleHistoryList(
                 mlPredictedCycleDays = mlPredictedCycleDays
             )
 
-            // ML Comparison Card
+            // Statistics Summary Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
@@ -129,7 +128,7 @@ fun CycleHistoryList(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = "Média Histórica",
+                            text = "Média dos Ciclos",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -150,7 +149,7 @@ fun CycleHistoryList(
 
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = "Previsão TensorFlow/ML",
+                            text = "Modelo Adaptativo",
                             style = MaterialTheme.typography.labelMedium,
                             color = PeriodRosePrimary,
                             fontWeight = FontWeight.Bold
@@ -228,14 +227,14 @@ fun CycleHistoryList(
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = if (cycles.isEmpty()) "Nenhum ciclo registrado" else "Nenhum resultado encontrado",
+                        text = if (cycles.isEmpty()) "Nenhum ciclo registrado ainda" else "Nenhum resultado encontrado",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = if (cycles.isEmpty()) "Clique em 'Registrar' para iniciar seu acompanhamento." else "Tente buscar outros termos.",
+                        text = if (cycles.isEmpty()) "Toque em 'Registrar' para iniciar seu acompanhamento pessoal." else "Tente buscar outros termos.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -248,7 +247,6 @@ fun CycleHistoryList(
                 val startDate = LocalDate.ofEpochDay(cycle.startDateEpochDay)
                 val formattedDate = startDate.format(dateFormatter)
 
-                // Calculate cycle interval relative to previous cycle chronologically
                 val currentIndexInAll = allSortedByEpoch.indexOf(cycle)
                 val intervalText = if (currentIndexInAll >= 0 && currentIndexInAll < allSortedByEpoch.size - 1) {
                     val days = cycle.startDateEpochDay - allSortedByEpoch[currentIndexInAll + 1].startDateEpochDay
@@ -334,14 +332,13 @@ fun CycleHistoryList(
         }
     }
 
-    // Deletion confirmation dialog
     cycleToDelete?.let { cycle ->
         AlertDialog(
             onDismissRequest = { cycleToDelete = null },
             title = { Text("Remover registro?") },
             text = {
                 val date = LocalDate.ofEpochDay(cycle.startDateEpochDay).format(dateFormatter)
-                Text("Tem certeza que deseja apagar a entrada de $date? As estatísticas do ciclo serão recalculadas.")
+                Text("Tem certeza que deseja apagar a entrada de $date? As estatísticas do seu ciclo serão recalculadas.")
             },
             confirmButton = {
                 TextButton(

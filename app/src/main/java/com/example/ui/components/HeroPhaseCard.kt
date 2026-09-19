@@ -1,6 +1,7 @@
 package com.example.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,9 +17,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -35,6 +35,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -48,10 +50,8 @@ import com.example.ui.theme.LutealAmber
 import com.example.ui.theme.OvulationPurplePrimary
 import com.example.ui.theme.PeriodRosePrimary
 import java.time.format.DateTimeFormatter
-
-import androidx.compose.foundation.Canvas
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
+import java.util.Locale
+import kotlin.math.abs
 
 @Composable
 fun HeroPhaseCard(
@@ -65,16 +65,20 @@ fun HeroPhaseCard(
         CyclePhase.FOLLICULAR -> FollicularGreen
         CyclePhase.FERTILE -> FertileBluePrimary
         CyclePhase.OVULATION -> OvulationPurplePrimary
-        CyclePhase.LUTEAL -> PeriodRosePrimary
+        CyclePhase.LUTEAL -> LutealAmber
         null -> PeriodRosePrimary
     }
 
     val backgroundGradient = Brush.verticalGradient(
         colors = listOf(
             Color.White,
-            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
         )
     )
+
+    val portugueseLocale = Locale.forLanguageTag("pt-BR")
+    val monthDayFormatter = DateTimeFormatter.ofPattern("dd 'de' MMMM", portugueseLocale)
+    val shortDayFormatter = DateTimeFormatter.ofPattern("dd/MM")
 
     Card(
         modifier = modifier
@@ -94,12 +98,12 @@ fun HeroPhaseCard(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                // Phase badge
+                // 1. Phase badge & cycle day
                 prediction.currentPhase?.let { phase ->
                     Surface(
                         color = phaseColor.copy(alpha = 0.12f),
                         shape = CircleShape,
-                        modifier = Modifier.padding(bottom = 16.dp)
+                        modifier = Modifier.padding(bottom = 12.dp)
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -119,14 +123,23 @@ fun HeroPhaseCard(
                                 color = phaseColor,
                                 letterSpacing = 1.sp
                             )
+                            prediction.currentCycleDay?.let { day ->
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "• DIA $day",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = phaseColor
+                                )
+                            }
                         }
                     }
                 }
 
-                // Countdown / Status main display with Circular Ring
+                // 2. Main Countdown / Ring Display
                 if (prediction.totalLoggedCycles == 0) {
                     Text(
-                        text = "Bem-vinda ao DD",
+                        text = "Oi, Giovanna 🌷",
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center,
@@ -134,34 +147,31 @@ fun HeroPhaseCard(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Registre sua última menstruação para calcular suas previsões com alta precisão.",
+                        text = "Esse é o seu Diário Dela. Registre sua última menstruação para começar a acompanhar seus padrões e previsões com total privacidade.",
                         style = MaterialTheme.typography.bodyMedium,
                         textAlign = TextAlign.Center,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 } else {
                     val days = prediction.daysUntilNextPeriod ?: 0
-                    val avgDays = prediction.mlPredictedCycleDays.toFloat().coerceAtLeast(1f)
+                    val totalCycleDays = prediction.adaptiveCycleDays.toFloat().coerceAtLeast(1f)
                     val progressFraction = if (days > 0) {
-                        ((avgDays - days) / avgDays).coerceIn(0.1f, 1f)
+                        ((totalCycleDays - days) / totalCycleDays).coerceIn(0.08f, 1f)
                     } else 1f
 
-                    // Radial Circular Progress Ring
                     Box(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier
-                            .size(170.dp)
+                            .size(175.dp)
                             .padding(8.dp)
                     ) {
                         val trackColor = MaterialTheme.colorScheme.surfaceVariant
                         Canvas(modifier = Modifier.fillMaxSize()) {
                             val strokeWidth = 12.dp.toPx()
-                            // Background circle track
                             drawCircle(
                                 color = trackColor,
                                 style = Stroke(width = strokeWidth)
                             )
-                            // Progress arc
                             drawArc(
                                 color = phaseColor,
                                 startAngle = -90f,
@@ -202,13 +212,13 @@ fun HeroPhaseCard(
                                 )
                             } else {
                                 Text(
-                                    text = "+${Math.abs(days)}d",
+                                    text = "+${abs(days)}d",
                                     style = MaterialTheme.typography.headlineLarge,
                                     fontWeight = FontWeight.ExtraBold,
                                     color = PeriodRosePrimary
                                 )
                                 Text(
-                                    text = "Atraso",
+                                    text = "Variação",
                                     style = MaterialTheme.typography.labelMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = PeriodRosePrimary
@@ -217,24 +227,89 @@ fun HeroPhaseCard(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
 
-                    // Next period target date
+                    // Next period target date and uncertainty range
                     prediction.nextPeriodStart?.let { nextDate ->
+                        val dateText = nextDate.format(monthDayFormatter)
+                        val windowStartText = prediction.nextPeriodWindowStart?.format(shortDayFormatter)
+                        val windowEndText = prediction.nextPeriodWindowEnd?.format(shortDayFormatter)
+
                         Text(
-                            text = "Sua próxima menstruação deve começar em ${nextDate.format(DateTimeFormatter.ofPattern("dd 'de' MMMM"))}.",
+                            text = "Próxima menstruação estimada para $dateText",
                             style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium,
+                            fontWeight = FontWeight.Bold,
                             textAlign = TextAlign.Center,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 12.dp)
+                            color = MaterialTheme.colorScheme.onSurface
                         )
+
+                        if (windowStartText != null && windowEndText != null) {
+                            Text(
+                                text = "Faixa estimada: $windowStartText a $windowEndText (±${prediction.uncertaintyDays} dias)",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+
+                        Text(
+                            text = prediction.dataConfidenceText,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
+                }
+
+                // 3. Health Attention Signals (Discreet informative health cards)
+                if (prediction.healthAttentionSignals.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(14.dp))
+                    prediction.healthAttentionSignals.forEach { signal ->
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(14.dp),
+                                verticalAlignment = Alignment.Top
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Info,
+                                    contentDescription = null,
+                                    tint = PeriodRosePrimary,
+                                    modifier = Modifier
+                                        .size(20.dp)
+                                        .padding(top = 2.dp)
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Column {
+                                    Text(
+                                        text = signal.title,
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = signal.message,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        lineHeight = 18.sp
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Action Buttons
+                // 4. Action Buttons
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -258,7 +333,7 @@ fun HeroPhaseCard(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Registrar menstruação hoje",
+                            text = "Registrar hoje",
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold
                         )

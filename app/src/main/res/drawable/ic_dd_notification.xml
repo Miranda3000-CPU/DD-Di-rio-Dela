@@ -1,0 +1,13 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Monochrome Tulip Icon for DD Notifications -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M12,2C11.5,2 11,2.5 11,3C11,4.5 10.2,7 8.5,8.8C6.8,10.6 5,12 5,14.5C5,18.1 7.9,21 11.5,21C11.7,21 11.8,21 12,21C12.2,21 12.3,21 12.5,21C16.1,21 19,18.1 19,14.5C19,12 17.2,10.6 15.5,8.8C13.8,7 13,4.5 13,3C13,2.5 12.5,2 12,2ZM12,5.2C12.8,7.3 14.1,9.4 15.6,11.1C16.5,12.1 17,13.2 17,14.5C17,17 14.9,19 12.4,19C12.3,19 12.1,19 12,19C11.9,19 11.7,19 11.6,19C9.1,19 7,17 7,14.5C7,13.2 7.5,12.1 8.4,11.1C9.9,9.4 11.2,7.3 12,5.2Z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M12,8.5C11.2,10.2 10.2,11.8 9.5,13C9.2,13.5 9,14.1 9,14.7C9,16.4 10.3,17.7 12,17.7C13.7,17.7 15,16.4 15,14.7C15,14.1 14.8,13.5 14.5,13C13.8,11.8 12.8,10.2 12,8.5Z" />
+</vector>

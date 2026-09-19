@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Egg
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Opacity
@@ -40,93 +41,152 @@ import com.example.ui.theme.OvulationPurpleContainer
 import com.example.ui.theme.OvulationPurplePrimary
 import com.example.ui.theme.PeriodRoseBackground
 import com.example.ui.theme.PeriodRosePrimary
-import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @Composable
 fun PredictionCards(
     prediction: CyclePrediction,
     modifier: Modifier = Modifier
 ) {
-    val dateFormatter = DateTimeFormatter.ofPattern("dd 'de' MMM, yyyy")
+    val portugueseLocale = Locale.forLanguageTag("pt-BR")
+    val dateFormatter = DateTimeFormatter.ofPattern("dd 'de' MMM, yyyy", portugueseLocale)
     val shortDateFormatter = DateTimeFormatter.ofPattern("dd/MM")
 
     Column(
         modifier = modifier
             .fillMaxWidth()
             .testTag("prediction_cards_column"),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Text(
-            text = "Previsões do Ciclo",
+            text = "Suas Previsões do Ciclo",
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground
         )
 
-        // 1. Next Period
+        // 1. Next Period Primary Estimate
+        val windowText = if (prediction.nextPeriodWindowStart != null && prediction.nextPeriodWindowEnd != null) {
+            "Faixa estimada: ${prediction.nextPeriodWindowStart.format(shortDateFormatter)} a ${prediction.nextPeriodWindowEnd.format(shortDateFormatter)} (±${prediction.uncertaintyDays} dias)"
+        } else {
+            "Intervalo padrão de 28 dias"
+        }
+
         PredictionItemCard(
-            title = "Próxima Menstruação",
+            title = "Próxima Menstruação Estimada",
             dateRange = prediction.nextPeriodStart?.format(dateFormatter) ?: "Aguardando registros",
-            subtitle = "Modelo ML Adaptativo: ${prediction.mlPredictedCycleDays} dias • Média histórica: ${prediction.averageCycleDays} dias",
+            subtitle = "Modelo estatístico adaptativo: ${prediction.adaptiveCycleDays} dias • $windowText",
             icon = Icons.Default.WaterDrop,
             accentColor = PeriodRosePrimary,
             backgroundColor = PeriodRoseBackground
         )
 
-        // ML Model Confidence Pill
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+        // 2. Projeções para 90 dias
+        if (prediction.projectedCycles90Days.size > 1) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
             ) {
-                Column {
-                    Text(
-                        text = "Modelo Predictivo Adaptativo",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = OvulationPurplePrimary
-                    )
-                    Text(
-                        text = "Confiança da Previsão: ${prediction.mlConfidencePercent}%",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-                Surface(
-                    color = OvulationPurplePrimary.copy(alpha = 0.15f),
-                    shape = RoundedCornerShape(12.dp)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "Projeções para os Próximos 90 Dias",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Surface(
+                            color = PeriodRosePrimary.copy(alpha = 0.12f),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text(
+                                text = "Estimativas",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = PeriodRosePrimary,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+
                     Text(
-                        text = "ML Ativo",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = OvulationPurplePrimary,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                        text = "Projeção dos próximos ciclos dentro de 3 meses. Note que a incerteza aumenta para datas mais distantes no futuro:",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    prediction.projectedCycles90Days.forEach { projected ->
+                        val cycleLabel = if (projected.cycleIndex == 1) "1º Próximo ciclo" else "${projected.cycleIndex}º Ciclo futuro"
+                        val formattedStart = projected.estimatedStartDate.format(dateFormatter)
+                        val window = "${projected.windowStart.format(shortDateFormatter)} a ${projected.windowEnd.format(shortDateFormatter)}"
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                                .padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = cycleLabel,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = PeriodRosePrimary
+                                )
+                                Text(
+                                    text = formattedStart,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text(
+                                    text = "Faixa: $window",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = "±${projected.uncertaintyDays} dias",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
 
-        // 2. Ovulation
+        // 3. Ovulação Estimada
         PredictionItemCard(
             title = "Ovulação Estimada",
             dateRange = prediction.ovulationDate?.format(dateFormatter) ?: "Aguardando registros",
-            subtitle = "Aproximadamente 14 dias antes do próximo ciclo",
+            subtitle = "Estimativa retrospectiva aproximada: 14 dias antes do ciclo seguinte",
             icon = Icons.Default.Egg,
             accentColor = OvulationPurplePrimary,
             backgroundColor = OvulationPurpleContainer
         )
 
-        // 3. Fertile Window
+        // 4. Janela Fértil Estimada
         val fertileText = if (prediction.fertileStart != null && prediction.fertileEnd != null) {
             "${prediction.fertileStart.format(shortDateFormatter)} até ${prediction.fertileEnd.format(shortDateFormatter)}"
         } else {
@@ -134,15 +194,15 @@ fun PredictionCards(
         }
 
         PredictionItemCard(
-            title = "Período Fértil",
+            title = "Janela Fértil Estimada",
             dateRange = fertileText,
-            subtitle = "5 dias antes até 1 dia após a ovulação",
+            subtitle = "5 dias antes até 1 dia após a ovulação estimada",
             icon = Icons.Default.Opacity,
             accentColor = FertileBluePrimary,
             backgroundColor = FertileBlueBackground
         )
 
-        // Medical Disclaimer Card
+        // 5. Scientific Medical Disclaimer
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
@@ -164,7 +224,7 @@ fun PredictionCards(
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(
-                    text = "Aviso: Todas as datas e cálculos são estimativas baseadas em médias matemáticas para uso pessoal e não substituem o acompanhamento clínico ou contracepção médica.",
+                    text = "Aviso: As datas são estimativas baseadas nos registros do seu histórico pessoal e não confirmam ovulação. Não devem ser usadas isoladamente para contracepção ou planejamento médico.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     lineHeight = 18.sp

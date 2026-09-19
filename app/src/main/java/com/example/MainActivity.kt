@@ -7,11 +7,9 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -22,7 +20,6 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.WaterDrop
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
@@ -32,7 +29,6 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -52,10 +48,10 @@ import com.example.ui.components.CycleHistoryList
 import com.example.ui.components.HeroPhaseCard
 import com.example.ui.components.LogPeriodDialog
 import com.example.ui.components.PredictionCards
-import com.example.ui.components.VisualCalendar
 import com.example.ui.components.PrivacyNoticeBanner
-import com.example.ui.components.UserNameHeader
 import com.example.ui.components.SettingsScreen
+import com.example.ui.components.UserNameHeader
+import com.example.ui.components.VisualCalendar
 import com.example.ui.theme.MeuCicloTheme
 import com.example.ui.theme.PeriodRosePrimary
 import java.time.LocalDate
@@ -68,8 +64,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Create notification channel on app start
-        NotificationHelper.createNotificationChannel(applicationContext)
+        // Create notification channels on start
+        NotificationHelper.createNotificationChannels(applicationContext)
 
         setContent {
             MeuCicloTheme {
@@ -85,13 +81,15 @@ fun MeuCicloApp(viewModel: CycleViewModel) {
     val context = LocalContext.current
 
     val cycles by viewModel.cycles.collectAsStateWithLifecycle()
+    val dailyLogs by viewModel.dailyLogs.collectAsStateWithLifecycle()
     val prediction by viewModel.prediction.collectAsStateWithLifecycle()
     val notificationsEnabled by viewModel.notificationsEnabled.collectAsStateWithLifecycle()
     val selectedCalendarDate by viewModel.selectedCalendarDate.collectAsStateWithLifecycle()
+    val selectedDateLog by viewModel.selectedDateLog.collectAsStateWithLifecycle()
     val userName by viewModel.userName.collectAsStateWithLifecycle()
     val privacyNoticeDismissed by viewModel.privacyNoticeDismissed.collectAsStateWithLifecycle()
 
-    var selectedTab by remember { mutableIntStateOf(0) } // 0: Início, 1: Calendário, 2: Histórico, 3: Configurações
+    var selectedTab by remember { mutableIntStateOf(0) } // 0: Início, 1: Calendário, 2: Histórico, 3: Ajustes
     var showLogDialog by remember { mutableStateOf(false) }
     var logDialogInitialDate by remember { mutableStateOf(LocalDate.now()) }
 
@@ -140,7 +138,7 @@ fun MeuCicloApp(viewModel: CycleViewModel) {
                 NavigationBarItem(
                     selected = selectedTab == 3,
                     onClick = { selectedTab = 3 },
-                    icon = { Icon(Icons.Default.Settings, contentDescription = "Configurações") },
+                    icon = { Icon(Icons.Default.Settings, contentDescription = "Ajustes") },
                     label = { Text("Ajustes") },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = PeriodRosePrimary,
@@ -200,7 +198,7 @@ fun MeuCicloApp(viewModel: CycleViewModel) {
                 }
 
                 when (selectedTab) {
-                    // TAB 0: Início - Somente o que deve ser registrado & status rápido
+                    // TAB 0: Início
                     0 -> {
                         item {
                             HeroPhaseCard(
@@ -215,15 +213,21 @@ fun MeuCicloApp(viewModel: CycleViewModel) {
                                 }
                             )
                         }
+
+                        item {
+                            PredictionCards(prediction = prediction)
+                        }
                     }
 
-                    // TAB 1: Calendário - Informações visuais completas sobre o ciclo
+                    // TAB 1: Calendário
                     1 -> {
                         item {
                             VisualCalendar(
                                 cycles = cycles,
+                                dailyLogs = dailyLogs,
                                 prediction = prediction,
                                 selectedDate = selectedCalendarDate,
+                                selectedDateLog = selectedDateLog,
                                 onDateSelected = { date ->
                                     viewModel.setSelectedCalendarDate(date)
                                 },
@@ -239,14 +243,14 @@ fun MeuCicloApp(viewModel: CycleViewModel) {
                         }
                     }
 
-                    // TAB 2: Histórico - Informações armazenadas locais com gráfico linear
+                    // TAB 2: Histórico e Gráficos
                     2 -> {
                         item {
                             CycleHistoryList(
                                 cycles = cycles,
                                 averageCycleDays = prediction.averageCycleDays,
-                                mlPredictedCycleDays = prediction.mlPredictedCycleDays,
-                                mlConfidencePercent = prediction.mlConfidencePercent,
+                                mlPredictedCycleDays = prediction.adaptiveCycleDays,
+                                mlConfidencePercent = 90,
                                 onDeleteCycle = { id ->
                                     viewModel.deleteCycle(id)
                                 }
@@ -254,10 +258,11 @@ fun MeuCicloApp(viewModel: CycleViewModel) {
                         }
                     }
 
-                    // TAB 3: Configurações - Personalização e ajustes do app
+                    // TAB 3: Ajustes e Backup
                     3 -> {
                         item {
                             SettingsScreen(
+                                viewModel = viewModel,
                                 userName = userName,
                                 onUpdateUserName = { newName ->
                                     viewModel.setUserName(newName)
@@ -281,13 +286,27 @@ fun MeuCicloApp(viewModel: CycleViewModel) {
     if (showLogDialog) {
         LogPeriodDialog(
             initialDate = logDialogInitialDate,
+            existingLog = selectedDateLog,
             onDismiss = { showLogDialog = false },
-            onSave = { startDate, periodLengthDays, flowIntensity, symptoms, notes ->
-                viewModel.registerPeriodOnDate(
-                    startDate = startDate,
-                    periodLengthDays = periodLengthDays,
+            onSave = { startDate, isPeriodStart, periodLengthDays, flowIntensity, painLevel, symptoms, mood, energyLevel, sleepQuality, cervicalMucus, notes ->
+                if (isPeriodStart) {
+                    viewModel.registerPeriodOnDate(
+                        startDate = startDate,
+                        periodLengthDays = periodLengthDays,
+                        flowIntensity = flowIntensity,
+                        symptoms = symptoms,
+                        notes = notes
+                    )
+                }
+                viewModel.saveDailyLog(
+                    date = startDate,
                     flowIntensity = flowIntensity,
+                    painLevel = painLevel,
                     symptoms = symptoms,
+                    mood = mood,
+                    energyLevel = energyLevel,
+                    sleepQuality = sleepQuality,
+                    cervicalMucus = cervicalMucus,
                     notes = notes
                 )
                 showLogDialog = false

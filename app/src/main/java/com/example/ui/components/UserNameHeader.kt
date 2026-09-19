@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.ui.theme.PeriodRoseContainer
 import com.example.ui.theme.PeriodRosePrimary
 import java.time.LocalDate
@@ -50,12 +51,13 @@ fun UserNameHeader(
     var showEditDialog by remember { mutableStateOf(false) }
     var tempName by remember { mutableStateOf(userName) }
 
-    val PortugueseLocale = Locale("pt", "BR")
-    val todayFormatter = DateTimeFormatter.ofPattern("EEEE, dd 'de' MMMM", PortugueseLocale)
+    val portugueseLocale = Locale.forLanguageTag("pt-BR")
+    val todayFormatter = DateTimeFormatter.ofPattern("EEEE, dd 'de' MMMM", portugueseLocale)
     val todayText = LocalDate.now().format(todayFormatter)
-        .replaceFirstChar { if (it.isLowerCase()) it.titlecase(PortugueseLocale) else it.toString() }
+        .replaceFirstChar { if (it.isLowerCase()) it.titlecase(portugueseLocale) else it.toString() }
 
-    val initialLetter = if (userName.isNotBlank()) userName.take(1).uppercase() else "D"
+    val displayName = if (userName.isNotBlank()) userName else "Giovanna"
+    val initialLetter = displayName.take(1).uppercase()
 
     Row(
         modifier = modifier
@@ -66,15 +68,17 @@ fun UserNameHeader(
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.clickable {
-                tempName = userName
-                showEditDialog = true
-            }
+            modifier = Modifier
+                .clickable {
+                    tempName = displayName
+                    showEditDialog = true
+                }
+                .weight(1f)
         ) {
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .size(42.dp)
+                    .size(46.dp)
                     .clip(CircleShape)
                     .background(PeriodRoseContainer)
             ) {
@@ -90,7 +94,7 @@ fun UserNameHeader(
 
             Column {
                 Text(
-                    text = if (userName.isNotBlank()) "Olá, $userName" else "DD • Diário Dela",
+                    text = "Olá, $displayName 🌷",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground
@@ -108,16 +112,16 @@ fun UserNameHeader(
             modifier = Modifier
                 .clip(CircleShape)
                 .clickable {
-                    tempName = userName
+                    tempName = displayName
                     showEditDialog = true
                 }
                 .padding(8.dp)
         ) {
             Icon(
                 imageVector = Icons.Default.Edit,
-                contentDescription = "Editar Nome",
+                contentDescription = "Personalizar nome",
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(18.dp)
             )
         }
     }
@@ -125,18 +129,18 @@ fun UserNameHeader(
     if (showEditDialog) {
         AlertDialog(
             onDismissRequest = { showEditDialog = false },
-            title = { Text("Qual é o seu nome?") },
+            title = { Text("Personalizar Nome") },
             text = {
                 Column {
                     Text(
-                        text = "Digite seu nome para personalizar sua experiência no aplicativo.",
+                        text = "O aplicativo foi feito exclusivamente para você, Giovanna. Você pode definir como prefere ser chamada.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     OutlinedTextField(
                         value = tempName,
                         onValueChange = { tempName = it },
-                        label = { Text("Seu Nome") },
+                        label = { Text("Seu Nome ou Apelido") },
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(top = 12.dp)

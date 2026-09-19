@@ -6,9 +6,15 @@ import android.content.Intent
 
 class CycleAlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        val title = intent.getStringExtra("title") ?: "Lembrete do Ciclo"
-        val message = intent.getStringExtra("message") ?: "Sua menstruação está prevista para breve."
+        val title = intent.getStringExtra("title") ?: "DD • Diário Dela 🌷"
+        val message = intent.getStringExtra("message") ?: "Lembrete do seu ciclo."
+        val channelId = intent.getStringExtra("channelId") ?: NotificationHelper.CHANNEL_PREDICTIONS
 
-        NotificationHelper.showNotification(context, title, message)
+        NotificationHelper.showNotification(
+            context = context,
+            title = title,
+            message = message,
+            channelId = channelId
+        )
     }
 }

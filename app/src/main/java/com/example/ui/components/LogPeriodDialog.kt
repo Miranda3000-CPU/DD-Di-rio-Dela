@@ -28,10 +28,6 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.EmojiEmotions
-import androidx.compose.material.icons.filled.FitnessCenter
-import androidx.compose.material.icons.filled.Opacity
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material3.AlertDialog
@@ -65,6 +61,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.data.DailyLogEntity
 import com.example.ui.theme.PeriodRoseContainer
 import com.example.ui.theme.PeriodRosePrimary
 import java.time.LocalDate
@@ -77,39 +74,66 @@ import java.util.Locale
 @Composable
 fun LogPeriodDialog(
     initialDate: LocalDate = LocalDate.now(),
+    existingLog: DailyLogEntity? = null,
     onDismiss: () -> Unit,
-    onSave: (startDate: LocalDate, periodLengthDays: Int, flowIntensity: String, symptoms: String, notes: String) -> Unit
+    onSave: (
+        startDate: LocalDate,
+        isPeriodStart: Boolean,
+        periodLengthDays: Int,
+        flowIntensity: String,
+        painLevel: String,
+        symptoms: String,
+        mood: String,
+        energyLevel: String,
+        sleepQuality: String,
+        cervicalMucus: String,
+        notes: String
+    ) -> Unit
 ) {
-    val PortugueseLocale = Locale("pt", "BR")
-    val fullDateFormatter = DateTimeFormatter.ofPattern("EEEE, dd 'de' MMMM 'de' yyyy", PortugueseLocale)
+    val portugueseLocale = Locale.forLanguageTag("pt-BR")
+    val fullDateFormatter = DateTimeFormatter.ofPattern("EEEE, dd 'de' MMMM 'de' yyyy", portugueseLocale)
 
     var selectedDate by remember { mutableStateOf(initialDate) }
     var showInlineCalendar by remember { mutableStateOf(false) }
     var calendarYearMonth by remember { mutableStateOf(YearMonth.from(initialDate)) }
 
+    var isPeriodStart by remember { mutableStateOf(true) }
     var periodLengthDays by remember { mutableIntStateOf(5) }
-    var selectedFlow by remember { mutableStateOf("MÉDIO") }
-    var notesText by remember { mutableStateOf("") }
+    var selectedFlow by remember { mutableStateOf(existingLog?.flowIntensity ?: "MÉDIO") }
+    var selectedPain by remember { mutableStateOf(existingLog?.painLevel ?: "NENHUMA") }
+    var selectedMood by remember { mutableStateOf(existingLog?.mood ?: "Tranquila") }
+    var selectedEnergy by remember { mutableStateOf(existingLog?.energyLevel ?: "Média") }
+    var selectedSleep by remember { mutableStateOf(existingLog?.sleepQuality ?: "Boa") }
+    var selectedMucus by remember { mutableStateOf(existingLog?.cervicalMucus ?: "") }
+    var notesText by remember { mutableStateOf(existingLog?.notes ?: "") }
 
-    // Enhanced Flow Options with visual icons
+    // Physical Symptoms
+    val symptomOptions = listOf(
+        "Cólica", "Dor de cabeça", "Sensibilidade mamária", "Inchaço",
+        "Náusea", "Acne", "Cansaço", "Alteração intestinal", "Dor lombar", "Insônia"
+    )
+    val selectedSymptoms = remember {
+        mutableStateListOf<String>().apply {
+            if (!existingLog?.symptoms.isNullOrBlank()) {
+                val list = existingLog!!.symptoms.split(",").map { it.trim() }
+                addAll(list)
+            }
+        }
+    }
+
     val flowOptions = listOf(
+        Pair("SEM_FLUXO", "Sem sangramento"),
         Pair("LEVE", "💧 Leve"),
         Pair("MÉDIO", "💧💧 Médio"),
         Pair("INTENSO", "💧💧💧 Intenso"),
         Pair("ESCAPE", "🩸 Escape")
     )
 
-    // Moods & Feelings
-    val moodOptions = listOf("😊 Tranquila", "😰 Ansiosa", "🥺 Sensível", "😠 Irritada", "😴 Cansada", "⚡ Produtiva", "😭 Triste")
-    val selectedMoods = remember { mutableStateListOf<String>() }
-
-    // Physical Symptoms
-    val physicalSymptoms = listOf("⚡ Cólica", "🤕 Dor de cabeça", "🎈 Inchaço", "🍒 Mamas sensíveis", "✨ Acne", "🤢 Náusea", "🦴 Dor lombar", "💤 Insônia")
-    val selectedSymptoms = remember { mutableStateListOf<String>() }
-
-    // Cervical Mucus / Fluid
-    val mucusOptions = listOf("Seco", "Cremoso", "Aquoso", "Clara de Ovo (Fértil)")
-    var selectedMucus by remember { mutableStateOf("") }
+    val painOptions = listOf("Nenhuma", "Leve", "Moderada", "Forte")
+    val moodOptions = listOf("Tranquila", "Feliz", "Sensível", "Ansiosa", "Irritada", "Cansada", "Triste")
+    val energyOptions = listOf("Baixa", "Média", "Alta")
+    val sleepOptions = listOf("Ruim", "Regular", "Boa")
+    val mucusOptions = listOf("Seco", "Pegajoso", "Cremoso", "Aquoso", "Clara de Ovo (Fértil)")
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -134,12 +158,12 @@ fun LogPeriodDialog(
                 }
                 Column {
                     Text(
-                        text = "Registrar Menstruação",
+                        text = "Registrar Dia",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "Diário Dela • Coleta completa",
+                        text = "DD • Diário Dela",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -171,7 +195,7 @@ fun LogPeriodDialog(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Data de Início da Menstruação",
+                                text = "Data Selecionada",
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -193,7 +217,7 @@ fun LogPeriodDialog(
                         Spacer(modifier = Modifier.height(4.dp))
 
                         val formattedDate = selectedDate.format(fullDateFormatter)
-                            .replaceFirstChar { if (it.isLowerCase()) it.titlecase(PortugueseLocale) else it.toString() }
+                            .replaceFirstChar { if (it.isLowerCase()) it.titlecase(portugueseLocale) else it.toString() }
 
                         Text(
                             text = formattedDate,
@@ -251,7 +275,6 @@ fun LogPeriodDialog(
                                     )
                                     .padding(12.dp)
                             ) {
-                                // Calendar Header Navigation
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -262,7 +285,7 @@ fun LogPeriodDialog(
                                     }
 
                                     val monthYearName = calendarYearMonth.month
-                                        .getDisplayName(TextStyle.FULL, PortugueseLocale)
+                                        .getDisplayName(TextStyle.FULL, portugueseLocale)
                                         .replaceFirstChar { it.uppercase() } + " ${calendarYearMonth.year}"
 
                                     Text(
@@ -276,7 +299,6 @@ fun LogPeriodDialog(
                                     }
                                 }
 
-                                // Days of Week Header
                                 val weekDays = listOf("D", "S", "T", "Q", "Q", "S", "S")
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -296,7 +318,6 @@ fun LogPeriodDialog(
 
                                 Spacer(modifier = Modifier.height(6.dp))
 
-                                // Calendar Days Grid
                                 val firstDay = calendarYearMonth.atDay(1)
                                 val daysInMonth = calendarYearMonth.lengthOfMonth()
                                 val dayOffset = firstDay.dayOfWeek.value % 7
@@ -338,9 +359,9 @@ fun LogPeriodDialog(
                                                         style = MaterialTheme.typography.bodySmall,
                                                         fontWeight = if (isSelected || isToday) FontWeight.Bold else FontWeight.Normal,
                                                         color = when {
-                                                            isSelected -> Color.White
-                                                            isToday -> PeriodRosePrimary
-                                                            else -> MaterialTheme.colorScheme.onSurface
+                                                             isSelected -> Color.White
+                                                             isToday -> PeriodRosePrimary
+                                                             else -> MaterialTheme.colorScheme.onSurface
                                                         }
                                                     )
                                                 }
@@ -356,53 +377,85 @@ fun LogPeriodDialog(
                     }
                 }
 
-                // 2. Period Duration Stepper
-                Column {
-                    Text(
-                        text = "Duração Estimada da Menstruação",
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold
+                // 2. É início de uma nova menstruação?
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = "Novo ciclo menstrual?",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "Marque se hoje iniciou uma nova menstruação",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    FilterChip(
+                        selected = isPeriodStart,
+                        onClick = { isPeriodStart = !isPeriodStart },
+                        label = { Text(if (isPeriodStart) "Sim, início" else "Apenas diário") },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = PeriodRosePrimary,
+                            selectedLabelColor = Color.White
+                        )
                     )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        IconButton(
-                            onClick = { if (periodLengthDays > 1) periodLengthDays-- },
-                            enabled = periodLengthDays > 1
-                        ) {
-                            Icon(Icons.Default.Remove, contentDescription = "Diminuir dias")
-                        }
+                }
 
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = PeriodRoseContainer,
-                            modifier = Modifier.padding(horizontal = 12.dp)
+                // 3. Period Duration Stepper (if it's period start)
+                if (isPeriodStart) {
+                    Column {
+                        Text(
+                            text = "Duração Estimada do Sangramento",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text(
-                                text = "$periodLengthDays dias",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = PeriodRosePrimary,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                            )
-                        }
+                            IconButton(
+                                onClick = { if (periodLengthDays > 1) periodLengthDays-- },
+                                enabled = periodLengthDays > 1
+                            ) {
+                                Icon(Icons.Default.Remove, contentDescription = "Diminuir dias")
+                            }
 
-                        IconButton(
-                            onClick = { if (periodLengthDays < 15) periodLengthDays++ },
-                            enabled = periodLengthDays < 15
-                        ) {
-                            Icon(Icons.Default.Add, contentDescription = "Aumentar dias")
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = PeriodRoseContainer,
+                                modifier = Modifier.padding(horizontal = 12.dp)
+                            ) {
+                                Text(
+                                    text = "$periodLengthDays dias",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = PeriodRosePrimary,
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                                )
+                            }
+
+                            IconButton(
+                                onClick = { if (periodLengthDays < 15) periodLengthDays++ },
+                                enabled = periodLengthDays < 15
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = "Aumentar dias")
+                            }
                         }
                     }
                 }
 
-                // 3. Flow Intensity Selector
+                // 4. Intensidade do Fluxo
                 Column {
                     Text(
-                        text = "Intensidade do Fluxo",
+                        text = "Fluxo Menstrual",
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -426,36 +479,33 @@ fun LogPeriodDialog(
                     }
                 }
 
-                // 4. Mood Selector
+                // 5. Nível de Dor
                 Column {
                     Text(
-                        text = "Humor & Sentimentos",
+                        text = "Nível de Dor",
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(6.dp))
-                    FlowRow(
+                    Row(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        moodOptions.forEach { mood ->
-                            val isSelected = selectedMoods.contains(mood)
+                        painOptions.forEach { pain ->
                             FilterChip(
-                                selected = isSelected,
-                                onClick = {
-                                    if (isSelected) selectedMoods.remove(mood)
-                                    else selectedMoods.add(mood)
-                                },
-                                label = { Text(mood, fontSize = 12.sp) }
+                                selected = selectedPain.equals(pain, ignoreCase = true),
+                                onClick = { selectedPain = pain },
+                                label = { Text(pain, fontSize = 12.sp) },
+                                modifier = Modifier.weight(1f)
                             )
                         }
                     }
                 }
 
-                // 5. Symptoms Selector
+                // 6. Sintomas Físicos
                 Column {
                     Text(
-                        text = "Sintomas Físicos",
+                        text = "Sintomas Registrados",
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -464,7 +514,7 @@ fun LogPeriodDialog(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        physicalSymptoms.forEach { symptom ->
+                        symptomOptions.forEach { symptom ->
                             val isSelected = selectedSymptoms.contains(symptom)
                             FilterChip(
                                 selected = isSelected,
@@ -478,7 +528,54 @@ fun LogPeriodDialog(
                     }
                 }
 
-                // 6. Cervical Mucus
+                // 7. Bem-estar (Humor, Energia, Sono)
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "Bem-Estar",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    // Humor
+                    Text(text = "Humor:", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        moodOptions.forEach { mood ->
+                            FilterChip(
+                                selected = selectedMood == mood,
+                                onClick = { selectedMood = mood },
+                                label = { Text(mood, fontSize = 12.sp) }
+                            )
+                        }
+                    }
+
+                    // Energia
+                    Text(text = "Energia:", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        energyOptions.forEach { energy ->
+                            FilterChip(
+                                selected = selectedEnergy == energy,
+                                onClick = { selectedEnergy = energy },
+                                label = { Text(energy, fontSize = 12.sp) },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+
+                    // Sono
+                    Text(text = "Qualidade do Sono:", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        sleepOptions.forEach { sleep ->
+                            FilterChip(
+                                selected = selectedSleep == sleep,
+                                onClick = { selectedSleep = sleep },
+                                label = { Text(sleep, fontSize = 12.sp) },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
+
+                // 8. Cervical Mucus (Opcional)
                 Column {
                     Text(
                         text = "Fluido Cervical (Opcional)",
@@ -494,21 +591,19 @@ fun LogPeriodDialog(
                             val isSelected = selectedMucus == mucus
                             FilterChip(
                                 selected = isSelected,
-                                onClick = {
-                                    selectedMucus = if (isSelected) "" else mucus
-                                },
+                                onClick = { selectedMucus = if (isSelected) "" else mucus },
                                 label = { Text(mucus, fontSize = 12.sp) }
                             )
                         }
                     }
                 }
 
-                // 7. Notes text field
+                // 9. Observações Livres
                 OutlinedTextField(
                     value = notesText,
                     onValueChange = { notesText = it },
                     label = { Text("Observações (opcional)") },
-                    placeholder = { Text("Ex: Medicamentos, nivel de estresse, atípicos...") },
+                    placeholder = { Text("Ex: Medicamentos, rotina, detalhes do dia...") },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
@@ -520,20 +615,17 @@ fun LogPeriodDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    val combinedSymptomsList = mutableListOf<String>()
-                    combinedSymptomsList.addAll(selectedSymptoms)
-                    if (selectedMoods.isNotEmpty()) {
-                        combinedSymptomsList.add("Humor: ${selectedMoods.joinToString("/")}")
-                    }
-                    if (selectedMucus.isNotBlank()) {
-                        combinedSymptomsList.add("Fluido: $selectedMucus")
-                    }
-
                     onSave(
                         selectedDate,
+                        isPeriodStart,
                         periodLengthDays,
                         selectedFlow,
-                        combinedSymptomsList.joinToString(", "),
+                        selectedPain,
+                        selectedSymptoms.joinToString(", "),
+                        selectedMood,
+                        selectedEnergy,
+                        selectedSleep,
+                        selectedMucus,
                         notesText
                     )
                 },
