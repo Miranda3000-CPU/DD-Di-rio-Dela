@@ -45,6 +45,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.notification.NotificationHelper
 import com.example.ui.CycleViewModel
 import com.example.ui.components.CycleHistoryList
+import com.example.ui.components.CycleEducationCard
 import com.example.ui.components.HeroPhaseCard
 import com.example.ui.components.LogPeriodDialog
 import com.example.ui.components.PredictionCards
@@ -236,6 +237,10 @@ fun MeuCicloApp(viewModel: CycleViewModel) {
                                     showLogDialog = true
                                 }
                             )
+                        }
+
+                        item {
+                            CycleEducationCard()
                         }
 
                         item {
